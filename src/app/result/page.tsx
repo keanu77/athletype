@@ -1,25 +1,28 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent } from '@/components/ui';
-import { useMBTIStore } from '@/features/mbti/store';
-import { typeProfiles } from '@/data/types';
-import { getDimensionLabel } from '@/features/mbti/scoring';
-import { Dimension } from '@/features/mbti/types';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button, Card, CardContent } from "@/components/ui";
+import { useMBTIStore } from "@/features/mbti/store";
+import { typeProfiles } from "@/data/types";
+import { getDimensionLabel } from "@/features/mbti/scoring";
+import { Dimension } from "@/features/mbti/types";
+import { drawRoundRect } from "@/lib/canvas-utils";
+import { useHydration } from "@/hooks/useHydration";
 
 export default function ResultPage() {
   const router = useRouter();
+  const hydrated = useHydration();
   const { result, isCompleted, reset } = useMBTIStore();
   const [isCoachMode, setIsCoachMode] = useState(false);
 
   useEffect(() => {
     if (!isCompleted || !result) {
-      router.push('/');
+      router.push("/");
     }
   }, [isCompleted, result, router]);
 
-  if (!result) {
+  if (!hydrated || !result) {
     return (
       <div className="min-h-screen flex items-center justify-center sports-bg">
         <p className="text-gray-600">載入中...</p>
@@ -29,57 +32,85 @@ export default function ResultPage() {
 
   const profile = typeProfiles[result.type];
 
+  // Phase 1b: Guard against corrupted localStorage data
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center sports-bg">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">結果資料異常，請重新測驗</p>
+          <button
+            onClick={() => {
+              reset();
+              router.push("/");
+            }}
+            className="btn-sport text-white font-bold py-3 px-6 rounded-xl"
+          >
+            返回首頁
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleRetake = () => {
     reset();
-    router.push('/test');
+    router.push("/test");
   };
+
+  const CJK_FONT =
+    '"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif';
 
   const handleDownloadImage = async () => {
     try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas not supported');
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas not supported");
 
+      // Phase 4b: Retina DPI support
+      const dpr = window.devicePixelRatio || 1;
       const width = 1080;
       const height = 1080;
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.scale(dpr, dpr);
 
       // Background gradient
       const gradient = ctx.createLinearGradient(0, 0, width, height);
-      gradient.addColorStop(0, '#ff6b35');
-      gradient.addColorStop(0.3, '#ff8c42');
-      gradient.addColorStop(0.6, '#ffc107');
-      gradient.addColorStop(1, '#2eb872');
+      gradient.addColorStop(0, "#ff6b35");
+      gradient.addColorStop(0.3, "#ff8c42");
+      gradient.addColorStop(0.6, "#ffc107");
+      gradient.addColorStop(1, "#2eb872");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
 
       // Text settings
-      ctx.fillStyle = 'white';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = "white";
+      ctx.textAlign = "center";
 
       // Title
-      ctx.font = '32px Arial';
+      ctx.font = `32px ${CJK_FONT}`;
       ctx.globalAlpha = 0.9;
-      ctx.fillText('我的運動人格類型是', width / 2, 280);
+      ctx.fillText("我的運動人格類型是", width / 2, 280);
 
       // MBTI Type
       ctx.globalAlpha = 1;
-      ctx.font = 'bold 160px Arial';
+      ctx.font = `bold 160px ${CJK_FONT}`;
       ctx.fillText(result.type, width / 2, 450);
 
       // Display name
-      ctx.font = '48px Arial';
+      ctx.font = `48px ${CJK_FONT}`;
       ctx.fillText(profile.displayName.zh, width / 2, 540);
 
       // Tagline
       ctx.globalAlpha = 0.8;
-      ctx.font = '32px Arial';
+      ctx.font = `32px ${CJK_FONT}`;
       ctx.fillText(`"${profile.tagline.zh}"`, width / 2, 610);
 
       // Dimension bars - 中央對稱式圖表
       ctx.globalAlpha = 1;
-      const dimensions: Dimension[] = ['EI', 'SN', 'TF', 'JP'];
+      const dimensions: Dimension[] = ["EI", "SN", "TF", "JP"];
       const barY = 680;
       const barHeight = 28;
       const barWidth = 240; // 單邊寬度
@@ -92,69 +123,121 @@ export default function ResultPage() {
         const y = barY + index * 70;
 
         // 左側標籤 (pole A)
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'right';
-        ctx.fillStyle = 'white';
-        ctx.fillText(labels.poleA.split(' ')[0], centerX - barWidth - gap - 60, y + 20);
+        ctx.font = `bold 18px ${CJK_FONT}`;
+        ctx.textAlign = "right";
+        ctx.fillStyle = "white";
+        ctx.fillText(
+          labels.poleA.split(" ")[0],
+          centerX - barWidth - gap - 60,
+          y + 20,
+        );
 
         // 左側百分比
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText(`${score.percentA}%`, centerX - barWidth - gap - 10, y + 20);
+        ctx.font = `bold 22px ${CJK_FONT}`;
+        ctx.fillText(
+          `${score.percentA}%`,
+          centerX - barWidth - gap - 10,
+          y + 20,
+        );
 
         // 右側標籤 (pole B)
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(labels.poleB.split(' ')[0], centerX + barWidth + gap + 60, y + 20);
+        ctx.font = `bold 18px ${CJK_FONT}`;
+        ctx.textAlign = "left";
+        ctx.fillText(
+          labels.poleB.split(" ")[0],
+          centerX + barWidth + gap + 60,
+          y + 20,
+        );
 
         // 右側百分比
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText(`${score.percentB}%`, centerX + barWidth + gap + 10, y + 20);
+        ctx.font = `bold 22px ${CJK_FONT}`;
+        ctx.fillText(
+          `${score.percentB}%`,
+          centerX + barWidth + gap + 10,
+          y + 20,
+        );
 
         // 左側長條 (藍色系) - 從中間向左延伸
         const leftBarWidth = barWidth * (score.percentA / 100);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.beginPath();
-        ctx.roundRect(centerX - barWidth - gap/2, y, barWidth, barHeight, 6);
-        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        drawRoundRect(
+          ctx,
+          centerX - barWidth - gap / 2,
+          y,
+          barWidth,
+          barHeight,
+          6,
+        );
 
-        ctx.fillStyle = '#42a5f5'; // 藍色
-        ctx.beginPath();
-        ctx.roundRect(centerX - leftBarWidth - gap/2, y, leftBarWidth, barHeight, 6);
-        ctx.fill();
+        ctx.fillStyle = "#42a5f5"; // 藍色
+        drawRoundRect(
+          ctx,
+          centerX - leftBarWidth - gap / 2,
+          y,
+          leftBarWidth,
+          barHeight,
+          6,
+        );
 
         // 右側長條 (紫色系) - 從中間向右延伸
         const rightBarWidth = barWidth * (score.percentB / 100);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.beginPath();
-        ctx.roundRect(centerX + gap/2, y, barWidth, barHeight, 6);
-        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        drawRoundRect(ctx, centerX + gap / 2, y, barWidth, barHeight, 6);
 
-        ctx.fillStyle = '#b388ff'; // 紫色
-        ctx.beginPath();
-        ctx.roundRect(centerX + gap/2, y, rightBarWidth, barHeight, 6);
-        ctx.fill();
+        ctx.fillStyle = "#b388ff"; // 紫色
+        drawRoundRect(ctx, centerX + gap / 2, y, rightBarWidth, barHeight, 6);
 
         // 中間分隔線
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
         ctx.fillRect(centerX - 1, y - 5, 2, barHeight + 10);
       });
 
       // Footer
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = "white";
       ctx.globalAlpha = 0.7;
-      ctx.font = '24px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('運動人格測驗', width / 2, 980);
+      ctx.font = `24px ${CJK_FONT}`;
+      ctx.textAlign = "center";
+      ctx.fillText("運動人格測驗", width / 2, 980);
 
-      // Download
-      const link = document.createElement('a');
-      link.download = `mbti-sport-${result.type}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      // Phase 4c: toBlob + Phase 4d: Web Share API
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert("圖片產生失敗，請稍後再試");
+          return;
+        }
+
+        const file = new File([blob], `mbti-sport-${result.type}.png`, {
+          type: "image/png",
+        });
+
+        // Try native share first
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator
+            .share({
+              title: `我的運動人格：${result.type} ${profile.displayName.zh}`,
+              files: [file],
+            })
+            .catch(() => {
+              // User cancelled or share failed, fallback to download
+              downloadBlob(blob, `mbti-sport-${result.type}.png`);
+            });
+        } else {
+          downloadBlob(blob, `mbti-sport-${result.type}.png`);
+        }
+      }, "image/png");
     } catch (error) {
-      console.error('Failed to generate image:', error);
-      alert('圖片產生失敗，請稍後再試');
+      console.error("Failed to generate image:", error);
+      alert("圖片產生失敗，請稍後再試");
     }
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -168,8 +251,12 @@ export default function ResultPage() {
               {result.type}
             </span>
           </h1>
-          <p className="text-2xl text-gray-700 font-medium">{profile.displayName.zh}</p>
-          <p className="text-lg text-gray-500 mt-2 italic">"{profile.tagline.zh}"</p>
+          <p className="text-2xl text-gray-700 font-medium">
+            {profile.displayName.zh}
+          </p>
+          <p className="text-lg text-gray-500 mt-2 italic">
+            &ldquo;{profile.tagline.zh}&rdquo;
+          </p>
         </div>
 
         {/* Dimension Chart */}
@@ -179,16 +266,34 @@ export default function ResultPage() {
               維度分析
             </h3>
             <div className="space-y-6">
-              {(['EI', 'SN', 'TF', 'JP'] as Dimension[]).map((dim) => {
+              {(["EI", "SN", "TF", "JP"] as Dimension[]).map((dim) => {
                 const score = result.scores[dim];
                 const labels = getDimensionLabel(dim);
+                const isBorderline = score.percentA === 50;
                 return (
                   <div key={dim} className="group">
                     <div className="flex justify-between text-sm mb-2">
-                      <span className={score.percentA >= 50 ? 'font-bold text-[#1e88e5]' : 'text-gray-500'}>
+                      <span
+                        className={
+                          score.percentA >= 50
+                            ? "font-bold text-[#1e88e5]"
+                            : "text-gray-500"
+                        }
+                      >
                         {labels.poleA} {score.percentA}%
                       </span>
-                      <span className={score.percentB > 50 ? 'font-bold text-[#7c4dff]' : 'text-gray-500'}>
+                      {isBorderline && (
+                        <span className="text-xs text-amber-500 font-medium px-2 py-0.5 bg-amber-50 rounded-full">
+                          邊界值
+                        </span>
+                      )}
+                      <span
+                        className={
+                          score.percentB > 50
+                            ? "font-bold text-[#7c4dff]"
+                            : "text-gray-500"
+                        }
+                      >
                         {score.percentB}% {labels.poleB}
                       </span>
                     </div>
@@ -215,8 +320,8 @@ export default function ResultPage() {
             <button
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
                 !isCoachMode
-                  ? 'bg-gradient-to-r from-[#ff6b35] to-[#ff8c42] text-white shadow'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? "bg-gradient-to-r from-[#ff6b35] to-[#ff8c42] text-white shadow"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
               onClick={() => setIsCoachMode(false)}
             >
@@ -225,8 +330,8 @@ export default function ResultPage() {
             <button
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
                 isCoachMode
-                  ? 'bg-gradient-to-r from-[#1e88e5] to-[#42a5f5] text-white shadow'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? "bg-gradient-to-r from-[#1e88e5] to-[#42a5f5] text-white shadow"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
               onClick={() => setIsCoachMode(true)}
             >
@@ -248,17 +353,49 @@ export default function ResultPage() {
         <div className="space-y-4">
           {!isCoachMode ? (
             <>
-              <SectionCard title="你的優勢" items={profile.strengths} color="green" />
-              <SectionCard title="需注意的盲點" items={profile.pitfalls} color="yellow" />
-              <SectionCard title="訓練建議" items={profile.trainingTips} color="blue" />
-              <SectionCard title="潛在風險行為" items={profile.riskBehaviors} color="red" />
+              <SectionCard
+                title="你的優勢"
+                items={profile.strengths}
+                color="green"
+              />
+              <SectionCard
+                title="需注意的盲點"
+                items={profile.pitfalls}
+                color="yellow"
+              />
+              <SectionCard
+                title="訓練建議"
+                items={profile.trainingTips}
+                color="blue"
+              />
+              <SectionCard
+                title="潛在風險行為"
+                items={profile.riskBehaviors}
+                color="red"
+              />
             </>
           ) : (
             <>
-              <SectionCard title="指導建議" items={profile.coachTips} color="blue" />
-              <SectionCard title="訓練調整建議" items={profile.trainingTips} color="green" />
-              <SectionCard title="需注意的特質" items={profile.pitfalls} color="yellow" />
-              <SectionCard title="潛在風險行為" items={profile.riskBehaviors} color="red" />
+              <SectionCard
+                title="指導建議"
+                items={profile.coachTips}
+                color="blue"
+              />
+              <SectionCard
+                title="訓練調整建議"
+                items={profile.trainingTips}
+                color="green"
+              />
+              <SectionCard
+                title="需注意的特質"
+                items={profile.pitfalls}
+                color="yellow"
+              />
+              <SectionCard
+                title="潛在風險行為"
+                items={profile.riskBehaviors}
+                color="red"
+              />
             </>
           )}
         </div>
@@ -276,11 +413,17 @@ export default function ResultPage() {
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <span className="text-blue-400 mt-0.5">•</span>
-                <span><strong>沒有所謂的「冠軍人格」</strong>——各種類型的運動員都有機會取得卓越成就</span>
+                <span>
+                  <strong>沒有所謂的「冠軍人格」</strong>
+                  ——各種類型的運動員都有機會取得卓越成就
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-400 mt-0.5">•</span>
-                <span>後天的<strong>心理技能訓練 (PST)</strong> 可以彌補先天的性格弱點</span>
+                <span>
+                  後天的<strong>心理技能訓練 (PST)</strong>{" "}
+                  可以彌補先天的性格弱點
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-400 mt-0.5">•</span>
@@ -295,15 +438,23 @@ export default function ResultPage() {
 
           {/* MBTI 的科學定位 */}
           <div className="mb-4">
-            <p className="text-xs font-medium text-gray-500 mb-2">▎MBTI 的科學定位</p>
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              ▎MBTI 的科學定位
+            </p>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <span className="text-purple-400 mt-0.5">•</span>
-                <span>運動心理學研究多採用「大五人格模型」，其中<strong>盡責性</strong>是預測運動成功最強的指標</span>
+                <span>
+                  運動心理學研究多採用「大五人格模型」，其中
+                  <strong>盡責性</strong>是預測運動成功最強的指標
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-purple-400 mt-0.5">•</span>
-                <span>MBTI 的二分法（E/I）較為粗略——運動員特質往往是<strong>連續光譜</strong>，可因情境而變化</span>
+                <span>
+                  MBTI 的二分法（E/I）較為粗略——運動員特質往往是
+                  <strong>連續光譜</strong>，可因情境而變化
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-purple-400 mt-0.5">•</span>
@@ -314,19 +465,29 @@ export default function ResultPage() {
 
           {/* 本測驗的正確用途 */}
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">▎本測驗的正確用途</p>
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              ▎本測驗的正確用途
+            </p>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <span className="text-green-500 mt-0.5">✓</span>
-                <span><strong>自我覺察工具</strong>：了解自己的訓練與溝通偏好</span>
+                <span>
+                  <strong>自我覺察工具</strong>：了解自己的訓練與溝通偏好
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-green-500 mt-0.5">✓</span>
-                <span><strong>團隊溝通潤滑劑</strong>：理解隊友的回饋接受方式（T 型偏好數據、F 型需要情感連結）</span>
+                <span>
+                  <strong>團隊溝通潤滑劑</strong>：理解隊友的回饋接受方式（T
+                  型偏好數據、F 型需要情感連結）
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-red-400 mt-0.5">✗</span>
-                <span><strong>不適合用於</strong>：人才篩選、預測比賽成績、取代專業心理評估</span>
+                <span>
+                  <strong>不適合用於</strong>
+                  ：人才篩選、預測比賽成績、取代專業心理評估
+                </span>
               </li>
             </ul>
           </div>
@@ -361,14 +522,19 @@ export default function ResultPage() {
           >
             下載分享圖
           </button>
-          <Button size="lg" variant="outline" onClick={handleRetake} className="flex-1">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={handleRetake}
+            className="flex-1"
+          >
             重新測驗
           </Button>
         </div>
 
         <div className="text-center mt-6">
           <button
-            onClick={() => router.push('/types')}
+            onClick={() => router.push("/types")}
             className="text-[#1e88e5] hover:text-[#1565c0] font-medium transition-colors"
           >
             探索全部 16 種運動人格類型 →
@@ -387,23 +553,24 @@ function SectionCard({
 }: {
   title: string;
   items: string[];
-  color: 'green' | 'yellow' | 'orange' | 'blue' | 'red';
+  color: "green" | "yellow" | "orange" | "blue" | "red";
   badge?: boolean;
 }) {
   const colorClasses = {
-    green: 'border-l-[#2eb872]',
-    yellow: 'border-l-[#ffc107]',
-    orange: 'border-l-[#ff6b35]',
-    blue: 'border-l-[#1e88e5]',
-    red: 'border-l-[#ef4444]',
+    green: "border-l-[#2eb872]",
+    yellow: "border-l-[#ffc107]",
+    orange: "border-l-[#ff6b35]",
+    blue: "border-l-[#1e88e5]",
+    red: "border-l-[#ef4444]",
   };
 
   return (
-    <Card variant="elevated" className={`athletic-card border-l-4 ${colorClasses[color]}`}>
+    <Card
+      variant="elevated"
+      className={`athletic-card border-l-4 ${colorClasses[color]}`}
+    >
       <CardContent className="py-5">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          {title}
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
         {badge ? (
           <div className="flex flex-wrap gap-2">
             {items.map((item, index) => (

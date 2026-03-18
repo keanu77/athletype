@@ -1,9 +1,10 @@
-const CACHE_NAME = 'mbti-sport-v1';
+const CACHE_NAME = 'mbti-sport-v2';
 const STATIC_ASSETS = [
   '/',
   '/test',
   '/result',
   '/types',
+  '/offline.html',
 ];
 
 // Install event - cache static assets
@@ -64,9 +65,9 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       }).catch(() => {
-        // Return offline fallback for navigation requests
+        // Phase 6b: Return offline page for navigation requests
         if (event.request.mode === 'navigate') {
-          return caches.match('/');
+          return caches.match('/offline.html');
         }
         return new Response('Offline', { status: 503 });
       });

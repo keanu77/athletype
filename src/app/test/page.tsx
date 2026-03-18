@@ -1,21 +1,24 @@
-'use client';
+"use client";
 
-import { useEffect, useCallback, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent } from '@/components/ui';
-import { useMBTIStore } from '@/features/mbti/store';
-import { questions } from '@/data/questions';
+import { useEffect, useCallback, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Button, Card, CardContent } from "@/components/ui";
+import { useMBTIStore } from "@/features/mbti/store";
+import { questions } from "@/data/questions";
+import { useHydration } from "@/hooks/useHydration";
 
 const dimensionColors: Record<string, string> = {
-  EI: 'from-[#ff6b35] to-[#ff8c42]',
-  SN: 'from-[#2eb872] to-[#34d399]',
-  TF: 'from-[#1e88e5] to-[#42a5f5]',
-  JP: 'from-[#7c4dff] to-[#b388ff]',
+  EI: "from-[#ff6b35] to-[#ff8c42]",
+  SN: "from-[#2eb872] to-[#34d399]",
+  TF: "from-[#1e88e5] to-[#42a5f5]",
+  JP: "from-[#7c4dff] to-[#b388ff]",
 };
 
 export default function TestPage() {
   const router = useRouter();
+  const hydrated = useHydration();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const questionTitleRef = useRef<HTMLHeadingElement>(null);
   const {
     currentIndex,
     answers,
@@ -34,55 +37,83 @@ export default function TestPage() {
   const currentAnswer = question ? answers[question.id] : null;
   const isLastQuestion = currentIndex === questions.length - 1;
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === '1' || e.key === 'a' || e.key === 'A') {
-      if (question) setAnswer(question.id, 'A');
-    } else if (e.key === '2' || e.key === 'b' || e.key === 'B') {
-      if (question) setAnswer(question.id, 'B');
-    } else if (e.key === 'Enter' && canGoNext()) {
-      if (isLastQuestion) {
-        handleFinish();
-      } else {
-        handleNext();
-      }
-    } else if (e.key === 'Backspace' && canGoPrev()) {
-      handlePrev();
-    }
-  }, [question, setAnswer, canGoNext, canGoPrev, isLastQuestion]);
-
+  // Phase 5a: Loading timeout — if question is null after 3s, redirect home
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    if (hydrated && !question) {
+      const timeout = setTimeout(() => {
+        router.push("/");
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [hydrated, question, router]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setIsTransitioning(true);
     setTimeout(() => {
       nextQuestion();
       setIsTransitioning(false);
+      // Phase 3c: Focus management on question change
+      questionTitleRef.current?.focus();
     }, 150);
-  };
+  }, [nextQuestion]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setIsTransitioning(true);
     setTimeout(() => {
       prevQuestion();
       setIsTransitioning(false);
+      questionTitleRef.current?.focus();
     }, 150);
-  };
+  }, [prevQuestion]);
 
-  const handleFinish = () => {
+  const handleFinish = useCallback(() => {
     finishTest();
-    router.push('/result');
-  };
+    router.push("/result");
+  }, [finishTest, router]);
 
-  const handleOptionSelect = (option: 'A' | 'B') => {
-    if (question) {
-      setAnswer(question.id, option);
-    }
-  };
+  const handleOptionSelect = useCallback(
+    (option: "A" | "B") => {
+      if (question) {
+        setAnswer(question.id, option);
+      }
+    },
+    [question, setAnswer],
+  );
 
-  if (!question) {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "1" || e.key === "a" || e.key === "A") {
+        if (question) setAnswer(question.id, "A");
+      } else if (e.key === "2" || e.key === "b" || e.key === "B") {
+        if (question) setAnswer(question.id, "B");
+      } else if (e.key === "Enter" && canGoNext()) {
+        if (isLastQuestion) {
+          handleFinish();
+        } else {
+          handleNext();
+        }
+      } else if (e.key === "Backspace" && canGoPrev()) {
+        handlePrev();
+      }
+    },
+    [
+      question,
+      setAnswer,
+      canGoNext,
+      canGoPrev,
+      isLastQuestion,
+      handleFinish,
+      handleNext,
+      handlePrev,
+    ],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  if (!hydrated || !question) {
     return (
       <div className="min-h-screen flex items-center justify-center sports-bg">
         <p className="text-gray-600">載入中...</p>
@@ -101,16 +132,23 @@ export default function TestPage() {
             <span className="text-sm font-medium text-gray-600">
               問題 {progress.current} / {progress.total}
             </span>
-            <span className="text-sm text-gray-500">
-              {progress.percent}%
-            </span>
+            <span className="text-sm text-gray-500">{progress.percent}%</span>
           </div>
 
-          {/* Athletic Progress Bar */}
-          <div className="h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+          {/* Phase 3a: Progress Bar with ARIA */}
+          <div
+            className="h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner"
+            role="progressbar"
+            aria-valuenow={progress.current}
+            aria-valuemin={1}
+            aria-valuemax={progress.total}
+            aria-label="測驗進度"
+          >
             <div
               className={`h-full bg-gradient-to-r ${dimensionColor} transition-all duration-500 ease-out progress-athletic`}
-              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              style={{
+                width: `${(progress.current / progress.total) * 100}%`,
+              }}
             />
           </div>
 
@@ -120,7 +158,9 @@ export default function TestPage() {
               <div key={milestone} className="flex flex-col items-center">
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    progress.current >= milestone ? 'bg-[#ff6b35]' : 'bg-gray-300'
+                    progress.current >= milestone
+                      ? "bg-[#ff6b35]"
+                      : "bg-gray-300"
                   }`}
                 />
                 <span className="text-xs text-gray-400 mt-1">{milestone}</span>
@@ -130,24 +170,35 @@ export default function TestPage() {
         </div>
 
         {/* Question Card */}
-        <div className={`transition-all duration-150 ${isTransitioning ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'}`}>
+        <div
+          className={`transition-all duration-150 ${isTransitioning ? "opacity-0 translate-x-4" : "opacity-100 translate-x-0"}`}
+        >
           <Card variant="elevated" className="mb-8 sport-stripe athletic-card">
             <CardContent className="py-8">
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center mb-8 leading-relaxed">
+              <h2
+                ref={questionTitleRef}
+                tabIndex={-1}
+                className="text-xl sm:text-2xl font-semibold text-gray-900 text-center mb-8 leading-relaxed outline-none"
+              >
                 {question.text}
               </h2>
 
-              <div className="space-y-4">
+              {/* Phase 3b: radiogroup ARIA */}
+              <div
+                className="space-y-4"
+                role="radiogroup"
+                aria-label={`第 ${progress.current} 題選項`}
+              >
                 <OptionButton
-                  selected={currentAnswer === 'A'}
-                  onClick={() => handleOptionSelect('A')}
+                  selected={currentAnswer === "A"}
+                  onClick={() => handleOptionSelect("A")}
                   label="A"
                   text={question.optionA.text}
                   color={dimensionColor}
                 />
                 <OptionButton
-                  selected={currentAnswer === 'B'}
-                  onClick={() => handleOptionSelect('B')}
+                  selected={currentAnswer === "B"}
+                  onClick={() => handleOptionSelect("B")}
                   label="B"
                   text={question.optionB.text}
                   color={dimensionColor}
@@ -173,7 +224,7 @@ export default function TestPage() {
               onClick={handleFinish}
               disabled={!canGoNext()}
               className={`flex-1 btn-sport text-white font-bold py-3 px-6 rounded-xl text-lg ${
-                !canGoNext() ? 'opacity-50 cursor-not-allowed' : ''
+                !canGoNext() ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               查看結果
@@ -183,7 +234,7 @@ export default function TestPage() {
               onClick={handleNext}
               disabled={!canGoNext()}
               className={`flex-1 btn-sport text-white font-bold py-3 px-6 rounded-xl text-lg ${
-                !canGoNext() ? 'opacity-50 cursor-not-allowed' : ''
+                !canGoNext() ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               下一題
@@ -191,12 +242,24 @@ export default function TestPage() {
           )}
         </div>
 
-        {/* Keyboard Hint */}
+        {/* Phase 5c: Keyboard Hint — fixed ← to Backspace */}
         <div className="text-center text-gray-400 text-sm mt-6 bg-white/50 rounded-lg py-2">
           <span className="inline-flex items-center gap-4">
-            <span><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">1</kbd>/<kbd className="px-2 py-1 bg-gray-100 rounded text-xs">2</kbd> 選擇</span>
-            <span><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Enter</kbd> 下一題</span>
-            <span><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">←</kbd> 上一題</span>
+            <span>
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">1</kbd>/
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">2</kbd>{" "}
+              選擇
+            </span>
+            <span>
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Enter</kbd>{" "}
+              下一題
+            </span>
+            <span>
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">
+                Backspace
+              </kbd>{" "}
+              上一題
+            </span>
           </span>
         </div>
       </div>
@@ -219,22 +282,26 @@ function OptionButton({
 }) {
   return (
     <button
+      role="radio"
+      aria-checked={selected}
       onClick={onClick}
       className={`w-full p-4 rounded-xl text-left transition-all duration-200 border-2 ${
         selected
           ? `bg-gradient-to-r ${color} text-white border-transparent shadow-lg scale-[1.02]`
-          : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow'
+          : "bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow"
       }`}
     >
       <div className="flex items-start gap-3">
         <span
           className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-            selected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+            selected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
           }`}
         >
           {label}
         </span>
-        <span className={`text-lg ${selected ? 'text-white' : 'text-gray-700'}`}>
+        <span
+          className={`text-lg ${selected ? "text-white" : "text-gray-700"}`}
+        >
           {text}
         </span>
       </div>

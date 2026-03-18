@@ -1,20 +1,22 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui';
-import { useMBTIStore } from '@/features/mbti/store';
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
+import { useMBTIStore } from "@/features/mbti/store";
+import { useHydration } from "@/hooks/useHydration";
 
 export default function Home() {
   const router = useRouter();
+  const hydrated = useHydration();
   const { reset, isCompleted, result } = useMBTIStore();
 
   const handleStartTest = () => {
     reset();
-    router.push('/test');
+    router.push("/test");
   };
 
   const handleViewResult = () => {
-    router.push('/result');
+    router.push("/result");
   };
 
   return (
@@ -23,7 +25,9 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center mb-16 animate-slide-up">
           <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm mb-6">
-            <span className="text-sm font-medium text-gray-600">發現你的運動 DNA</span>
+            <span className="text-sm font-medium text-gray-600">
+              發現你的運動 DNA
+            </span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 mb-6 ribbon">
@@ -33,7 +37,8 @@ export default function Home() {
           </h1>
 
           <p className="text-xl text-gray-600 mb-4 max-w-2xl mx-auto">
-            透過 <span className="font-bold text-[#ff6b35]">28</span> 道運動情境題目，發現你的運動人格類型
+            透過 <span className="font-bold text-[#ff6b35]">28</span>{" "}
+            道運動情境題目，發現你的運動人格類型
           </p>
           <p className="text-lg text-gray-500 mb-8 max-w-2xl mx-auto">
             找到最適合你的訓練方式和運動項目
@@ -47,7 +52,7 @@ export default function Home() {
             >
               開始測驗
             </button>
-            {isCompleted && result && (
+            {hydrated && isCompleted && result && (
               <Button size="lg" variant="outline" onClick={handleViewResult}>
                 查看上次結果 ({result.type})
               </Button>
@@ -117,18 +122,21 @@ function FeatureCard({
   title,
   description,
   color,
-  delay
+  delay,
 }: {
   title: string;
   description: string;
-  color: 'orange' | 'green' | 'blue' | 'purple';
+  color: "orange" | "green" | "blue" | "purple";
   delay: number;
 }) {
   const colorClasses = {
-    orange: 'from-[#ff6b35]/10 to-[#ff8c42]/5 border-[#ff6b35]/20 hover:border-[#ff6b35]/40',
-    green: 'from-[#2eb872]/10 to-[#34d399]/5 border-[#2eb872]/20 hover:border-[#2eb872]/40',
-    blue: 'from-[#1e88e5]/10 to-[#42a5f5]/5 border-[#1e88e5]/20 hover:border-[#1e88e5]/40',
-    purple: 'from-[#7c4dff]/10 to-[#b388ff]/5 border-[#7c4dff]/20 hover:border-[#7c4dff]/40',
+    orange:
+      "from-[#ff6b35]/10 to-[#ff8c42]/5 border-[#ff6b35]/20 hover:border-[#ff6b35]/40",
+    green:
+      "from-[#2eb872]/10 to-[#34d399]/5 border-[#2eb872]/20 hover:border-[#2eb872]/40",
+    blue: "from-[#1e88e5]/10 to-[#42a5f5]/5 border-[#1e88e5]/20 hover:border-[#1e88e5]/40",
+    purple:
+      "from-[#7c4dff]/10 to-[#b388ff]/5 border-[#7c4dff]/20 hover:border-[#7c4dff]/40",
   };
 
   return (
