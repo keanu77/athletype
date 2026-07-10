@@ -7,10 +7,22 @@ import { MBTIType } from "@/features/mbti/types";
 // Phase 2b: Static generation for all 16 types
 export function generateStaticParams() {
   const types: MBTIType[] = [
-    "ISTJ", "ISFJ", "INFJ", "INTJ",
-    "ISTP", "ISFP", "INFP", "INTP",
-    "ESTP", "ESFP", "ENFP", "ENTP",
-    "ESTJ", "ESFJ", "ENFJ", "ENTJ",
+    "ISTJ",
+    "ISFJ",
+    "INFJ",
+    "INTJ",
+    "ISTP",
+    "ISFP",
+    "INFP",
+    "INTP",
+    "ESTP",
+    "ESFP",
+    "ENFP",
+    "ENTP",
+    "ESTJ",
+    "ESFJ",
+    "ENFJ",
+    "ENTJ",
   ];
   return types.map((type) => ({ type: type.toLowerCase() }));
 }
@@ -102,16 +114,8 @@ export default async function TypeDetailPage({
         <SectionCard title="優勢特質" items={profile.strengths} icon="💪" />
         <SectionCard title="需注意的盲點" items={profile.pitfalls} icon="⚠️" />
         <SectionCard title="適合的運動" items={profile.sportFit} icon="🏃" />
-        <SectionCard
-          title="訓練建議"
-          items={profile.trainingTips}
-          icon="📋"
-        />
-        <SectionCard
-          title="教練溝通建議"
-          items={profile.coachTips}
-          icon="🎯"
-        />
+        <SectionCard title="訓練建議" items={profile.trainingTips} icon="📋" />
+        <SectionCard title="教練溝通建議" items={profile.coachTips} icon="🎯" />
         <SectionCard
           title="潛在風險行為"
           items={profile.riskBehaviors}
@@ -126,6 +130,12 @@ export default async function TypeDetailPage({
           <Link href="/">
             <Button size="lg">開始測驗</Button>
           </Link>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="mt-8 p-4 bg-gray-100 rounded-lg text-center text-sm text-gray-600">
+          <p>本測驗結果僅供參考，不代表專業心理評估或醫療診斷</p>
+          <p className="mt-1">如有任何疑慮，請諮詢專業人士</p>
         </div>
       </div>
     </div>

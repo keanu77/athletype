@@ -105,8 +105,14 @@ export default function TypesPage() {
           </Link>
         </div>
 
+        {/* Disclaimer */}
+        <div className="mt-8 p-4 bg-gray-100 rounded-lg text-center text-sm text-gray-600">
+          <p>本測驗結果僅供參考，不代表專業心理評估或醫療診斷</p>
+          <p className="mt-1">如有任何疑慮，請諮詢專業人士</p>
+        </div>
+
         {/* 製作者資訊 */}
-        <div className="mt-8 text-center text-sm text-gray-500">
+        <div className="mt-4 text-center text-sm text-gray-500">
           <p>
             製作者：
             <a
