@@ -21,10 +21,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "運動人格遊戲 | AthleType",
+  title: "運動人格遊戲 | AthleteType",
   description:
     "透過 28 道運動情境題目，發現你的運動人格類型，找到最適合你的訓練方式和運動項目",
-  keywords: ["AthleType", "運動人格", "運動心理", "人格測驗", "訓練建議"],
+  keywords: ["AthleteType", "運動人格", "運動心理", "人格測驗", "訓練建議"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: "運動人格遊戲",
   },
   openGraph: {
-    title: "運動人格遊戲 | AthleType",
+    title: "運動人格遊戲 | AthleteType",
     description: "透過 28 道運動情境題目，發現你的運動人格類型",
     type: "website",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "AthleType 運動人格遊戲",
+  name: "AthleteType 運動人格遊戲",
   description:
     "透過 28 道運動情境題目，發現你的運動人格類型，找到最適合你的訓練方式和運動項目",
   applicationCategory: "HealthApplication",

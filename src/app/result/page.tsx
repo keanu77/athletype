@@ -197,7 +197,7 @@ export default function ResultPage() {
       ctx.globalAlpha = 0.7;
       ctx.font = `24px ${CJK_FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText("AthleType 運動人格遊戲", width / 2, 980);
+      ctx.fillText("AthleteType 運動人格遊戲", width / 2, 980);
 
       // Phase 4c: toBlob + Phase 4d: Web Share API
       canvas.toBlob((blob) => {
@@ -206,7 +206,7 @@ export default function ResultPage() {
           return;
         }
 
-        const file = new File([blob], `athletype-${result.type}.png`, {
+        const file = new File([blob], `athletetype-${result.type}.png`, {
           type: "image/png",
         });
 
@@ -219,10 +219,10 @@ export default function ResultPage() {
             })
             .catch(() => {
               // User cancelled or share failed, fallback to download
-              downloadBlob(blob, `athletype-${result.type}.png`);
+              downloadBlob(blob, `athletetype-${result.type}.png`);
             });
         } else {
-          downloadBlob(blob, `athletype-${result.type}.png`);
+          downloadBlob(blob, `athletetype-${result.type}.png`);
         }
       }, "image/png");
     } catch (error) {
