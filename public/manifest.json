@@ -1,6 +1,6 @@
 {
-  "name": "運動人格測驗",
-  "short_name": "運動MBTI",
+  "name": "AthleType 運動人格遊戲",
+  "short_name": "運動人格遊戲",
   "description": "透過 28 道運動情境題目，發現你的運動人格類型",
   "start_url": "/",
   "display": "standalone",

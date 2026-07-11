@@ -103,7 +103,7 @@ export const useMBTIStore = create<MBTIStore>()(
       },
     }),
     {
-      name: 'mbti-test-storage',
+      name: 'athletype-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         currentIndex: state.currentIndex,
