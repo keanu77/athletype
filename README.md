@@ -2,7 +2,7 @@
 
 28 題運動情境測驗，找出你屬於 16 種運動人格中的哪一種。純前端專案，沒有後端，作答資料只存在瀏覽器本機。
 
-線上版本：https://mbtisports.sportsmedicine.tw/
+線上版本：https://athletetype.sportsmedicine.tw/
 
 ## 功能
 
